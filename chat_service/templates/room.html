@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ room.name }} | {% endblock %}
+
+{% block content %}
+<div class="p-10 lg:p-20 text-center">
+    <h1 class="text-3xl lg:text-6xl text-slate-700">{{ room.name }}</h1>
+</div>
+
+<div class="mx-4 p-4 bg-gray-300 rounded-xl border-2 border-gray-500">
+    <div class="chat-messages space-y-3" id="chat-messages">
+        {% for m in messages %}<b>{{ m.user.username }}</b>: {{ m.content }}<br>{% endfor %}
+    </div>
+    <div class="chat-messages space-y-3" id="typing-message">
+        
+    </div>
+</div>
+
+<div class="mt-6 mx-4 p-4 bg-white rounded-xl">
+    <form method="post" action="." class="flex">
+        <input type="text" name="content" class="flex-1 mr-3" placeholder="Your message..." id="chat-message-input">
+
+        <button 
+            class="px-5 py-3 rounded-xl text-white bg-gray-700 hover:bg-gray-800"
+            id="chat-message-submit"
+        >Submit</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ room.slug|json_script:"json-roomname" }}
+{{ request.user.username|json_script:"json-username" }}
+
+<script>
+    const roomName = JSON.parse(document.getElementById('json-roomname').textContent);
+    const userName = JSON.parse(document.getElementById('json-username').textContent);
+ 
+    const chatSocket = new WebSocket(
+        'ws://'
+        + window.location.host
+        + '/ws/'
+        + roomName
+        + '/'
+    );
+    chatSocket.onclose = function(e) {
+        console.log('onclose')
+    }
+
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        var typingTimer;
+        var doneTypingInterval = 2000;
+        
+        if(data.event == 'new_message') {
+            if (data.message) {
+                document.querySelector('#chat-messages').innerHTML += ('<b>' + data.username + '</b>: ' + data.message + '<br>');
+            } else {
+                alert('The message was empty!')
+            } 
+        } else if(data.event == 'type_event') {
+                document.querySelector('#typing-message').innerHTML = ('<b>' + data.username  + ' is typing...' + '</b>');
+                clearTimeout(typingTimer);
+                typingTimer = setTimeout(doneTyping, doneTypingInterval);
+        }
+
+        scrollToBottom();
+    };
+
+    function doneTyping () {
+        document.querySelector('#typing-message').innerHTML = '';
+      }
+
+    document.querySelector('#chat-message-input').focus();
+    document.querySelector('#chat-message-input').onkeyup = function(e) {
+
+        chatSocket.send(JSON.stringify({
+            'type': 'type_event',
+            'username': userName,
+            'room': roomName
+        }));
+
+       if (e.keyCode === 13) {
+            document.querySelector('#chat-message-submit').click();
+        }
+    };
+
+    document.querySelector('#chat-message-submit').onclick = function(e) {
+        e.preventDefault()
+
+        const messageInputDom = document.querySelector('#chat-message-input');
+        const message = messageInputDom.value;
+
+        console.log({
+            'type': 'new_message',
+            'message': message,
+            'username': userName,
+            'room': roomName
+        })
+
+        chatSocket.send(JSON.stringify({
+            'type': 'new_message',
+            'message': message,
+            'username': userName,
+            'room': roomName
+        }));
+
+        messageInputDom.value = '';
+
+        return false
+    };
+
+    function scrollToBottom() {
+        let objDiv = document.getElementById("chat-messages");
+        objDiv.scrollTop = objDiv.scrollHeight;
+    }
+
+    scrollToBottom();
+</script>
+{% endblock %}

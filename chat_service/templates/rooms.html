@@ -1,0 +1,33 @@
+{% extends 'base.html' %} 
+
+{% block title %} Rooms | {% endblock %} 
+
+
+{% block content %}
+<div class="p-10 lg:p-10 text-center">
+  <h1 class="text-3xl lg:text-6xl text-slate-700">Rooms</h1>
+</div>
+
+<div class="items-center px-3 py-3">
+    <div class="p-6 bg-white shadow rounded-xl text-center px-3 py-3">
+        <form name="roomName" method="post" action="." class="flex">
+            {% csrf_token %}
+            <input type="text" name="content" class="flex-1 mr-3" placeholder="Your room name here..." id="chat-message-input">
+
+            <button class="px-5 py-3 rounded-xl text-white bg-gray-700 hover:bg-gray-800" id="create-room-submit">Create Room</button>
+        </form>
+    </div>
+</div>
+
+<div class="w-full flex flex-wrap items-center">
+    {% for room in rooms %}
+        <div class="w-full lg:w-1/4 px-3 py-3">
+            <div class="p-4 bg-white shadow rounded-xl text-center">
+                <h2 class="mb-5 text-2xl font-semibold">{{ room.name }}</h2>
+
+                <a href="{% url 'room' room.slug %}" class="px-5 py-3 block rounded-xl text-white bg-gray-700 hover:bg-gray-800">Join</a>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}
